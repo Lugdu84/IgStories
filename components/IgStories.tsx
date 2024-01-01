@@ -8,13 +8,51 @@ import {
 	TextInput,
 	Pressable,
 } from 'react-native';
-import { userStories } from './stories';
-import { useState } from 'react';
+import { userStories } from '../stories';
+import { useEffect, useState } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+	useSharedValue,
+	useAnimatedReaction,
+	useAnimatedStyle,
+	withTiming,
+	runOnJS,
+} from 'react-native-reanimated';
 
-export default function App() {
+const storyViewDuration = 3 * 1000;
+
+export default function IGStoriesScreen() {
 	const [userIndex, setUserIndex] = useState(0);
 	const [storyIndex, setStoryIndex] = useState(0);
+	const progress = useSharedValue(0); // 0 to 1
+
+	useEffect(() => {
+		progress.value = 0;
+		progress.value = withTiming(1, {
+			duration: storyViewDuration,
+		});
+	}, [storyIndex, userIndex]);
+
+	const goToNextStory = () => {
+		if (storyIndex < user.stories.length - 1) {
+			setStoryIndex((index) => index + 1);
+		} else {
+			goToNextUser();
+		}
+	};
+
+	useAnimatedReaction(
+		() => progress.value,
+		(currentValue, previousValue) => {
+			if (currentValue !== previousValue && currentValue === 1) {
+				runOnJS(goToNextStory)();
+			}
+		}
+	);
+
+	const indicatorAnimatedStyle = useAnimatedStyle(() => ({
+		width: `${progress.value * 100}%`,
+	}));
 
 	const user = userStories[userIndex];
 	const story = user.stories[storyIndex];
@@ -24,14 +62,6 @@ export default function App() {
 			setStoryIndex((index) => index - 1);
 		} else {
 			goToPreviousUser();
-		}
-	};
-
-	const goToNextStory = () => {
-		if (storyIndex < user.stories.length - 1) {
-			setStoryIndex((index) => index + 1);
-		} else {
-			goToNextUser();
 		}
 	};
 
@@ -51,10 +81,12 @@ export default function App() {
 	return (
 		<SafeAreaView style={styles.container}>
 			<View style={styles.storyContainer}>
-				<Image
-					style={styles.image}
-					source={{ uri: story.uri }}
-				/>
+				{story.uri && (
+					<Image
+						style={styles.image}
+						source={{ uri: story.uri }}
+					/>
+				)}
 				<Pressable
 					style={styles.navPressable}
 					onPress={goToPrevStory}
@@ -71,13 +103,17 @@ export default function App() {
 					<View style={styles.indicatorRow}>
 						{user.stories.map((story, index) => (
 							<View
-								key={index}
+								key={`${user.id}-${index}`}
 								style={styles.indicatorBG}>
-								<View
+								<Animated.View
 									style={[
 										styles.indicator,
-										{
-											width: index <= storyIndex ? '100%' : '20%',
+										storyIndex === index && indicatorAnimatedStyle,
+										index > storyIndex && {
+											width: 0,
+										},
+										index < storyIndex && {
+											width: '100%',
 										},
 									]}
 								/>
@@ -94,7 +130,6 @@ export default function App() {
 					placeholderTextColor={'gray'}
 				/>
 			</View>
-			<StatusBar style="light" />
 		</SafeAreaView>
 	);
 }
@@ -110,7 +145,7 @@ const styles = StyleSheet.create({
 	header: {
 		position: 'absolute',
 		width: '100%',
-		paddingTop: 5,
+		paddingTop: 10,
 		padding: 20,
 		top: 0,
 	},
@@ -156,6 +191,5 @@ const styles = StyleSheet.create({
 	indicator: {
 		backgroundColor: 'white',
 		height: '100%',
-		width: '50%',
 	},
 });
