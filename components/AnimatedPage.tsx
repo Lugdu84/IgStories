@@ -21,7 +21,7 @@ export default function AnimatedPage({
 }: AnimatedPageProps) {
 	const anim = useAnimatedStyle(() => ({
 		transform: [
-			{ perspective: 300 },
+			{ perspective: width * 2 },
 			{
 				rotateY: `${interpolate(
 					pageIndex.value,
